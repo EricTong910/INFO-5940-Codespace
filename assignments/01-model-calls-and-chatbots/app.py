@@ -8,7 +8,8 @@ client = OpenAI()
 st.title("Our Chatbot")
 
 # After editing this instruction, click New conversation to use it.
-system_prompt = "You are a helpful tutor. Explain your answers clearly."
+system_prompt = "Explain programming concepts using simple analogies and keep each answer under three sentences."
+
 # This returns True on the run triggered by clicking the button.
 new_conversation = st.button("New conversation")
 
@@ -22,7 +23,6 @@ if "messages" not in st.session_state or new_conversation:
 # Redraw earlier messages. Keep the system instruction out of the visible chat.
 for message in st.session_state.messages:
     if message["role"] != "system":
-        # The indented display call goes inside a chat container for this role.
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
@@ -32,39 +32,34 @@ question = st.chat_input("Ask a question")
 # Only call the model when the user submits a new message.
 if question:
     # Make a new list containing the saved conversation and the new question.
-    # Using + leaves the saved history unchanged until we have an answer.
     request_messages = st.session_state.messages + [
         {"role": "user", "content": question}
     ]
-    # Show the new question now; the earlier loop only displayed saved messages.
+
+    # Show the new question.
     with st.chat_message("user"):
         st.markdown(question)
 
-    # OPTION 1: Wait for the complete answer (enabled by default).
-    # Send the entire conversation, then extract the first assistant reply.
-    response = client.chat.completions.create(
-        model="openai.gpt-4o",
-        messages=request_messages,
-    )
-    # choices[0] selects the first choice; message.content holds its text.
-    answer = response.choices[0].message.content
-
-    with st.chat_message("assistant"):
-        st.markdown(answer)
-
-    # OPTION 2: Stream the answer as it arrives.
-    # To enable: comment out Option 1's code above, then uncomment these 7 lines.
-    # Keep only one option active so each question makes one API call.
-    # stream = client.chat.completions.create(
+    # OPTION 1: Wait for the complete answer.
+    # Disabled for Experiment 3 because Option 2 streaming is enabled.
+    # response = client.chat.completions.create(
     #     model="openai.gpt-4o",
     #     messages=request_messages,
-    #     stream=True,
     # )
+    # answer = response.choices[0].message.content
+    #
     # with st.chat_message("assistant"):
-    #     answer = st.write_stream(stream)
+    #     st.markdown(answer)
 
-    # write_stream displays the pieces and returns the complete answer text.
-    # Both options use `answer`, so the history update below works with either.
+    # OPTION 2: Stream the answer as it arrives.
+    stream = client.chat.completions.create(
+        model="openai.gpt-4o",
+        messages=request_messages,
+        stream=True,
+    )
+
+    with st.chat_message("assistant"):
+        answer = st.write_stream(stream)
 
     # Save both sides of this exchange so the next request can include them.
     st.session_state.messages = request_messages + [
